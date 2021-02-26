@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "stardew"
+version = "0.1.0"
+description = "FastAPI Demo"
+authors = ["YaoYuHang <yaoyuhangs@163.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+fastapi = "^0.63.0"
+aioredis = "^1.3.1"
+captcha = "^0.3"
+orjson = "^3.4.7"
+alembic = "^1.5.2"
+uvicorn = "^0.13.3"
+aiomysql = "^0.0.21"
+pydantic = {extras = ["dotenv", "email"], version = "^1.7.3"}
+python-jose = {extras = ["cryptography"], version = "^3.2.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+sqlalchemy = {git = "https://github.com/sqlalchemy/sqlalchemy.git", rev = "rel_1_4_0b2"}
+pydantic-sqlalchemy = "^0.0.8"
+Jinja2 = "^2.11.3"
+loguru = "^0.5.3"
+dependency-injector = "^4.26.0"
+psycopg2 = "^2.8.6"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+pytest-asyncio = "^0.14.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+#[[tool.poetry.source]]
+#name = "aliyun"
+#url = "https://mirrors.aliyun.com/pypi/simple/"
