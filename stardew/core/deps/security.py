@@ -45,6 +45,11 @@ async def login_required(
             algorithms=ALGORITHMS.HS256
         )
         token_data = TokenPayload(sub=payload["sub"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="登录信息已过期，请重新登录",
+        )
     except (jwt.JWTError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

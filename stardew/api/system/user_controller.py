@@ -2,11 +2,14 @@
 # @Author        : Yao YuHang
 # @CreatedTime   : 2021/2/8 12:38
 # @Description   : 系统用户管理
+from typing import List
+
 from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends, Response, status
 
-from stardew.services.system.interfaces import UserService
+from stardew.models.system import SysUser
 from stardew.core.deps.security import permission_required
+from stardew.services.system.interfaces import UserService
 from stardew.core.container import IocContainer as Container
 from stardew.schemas.system import UserSimpleSchema, UserCreationSchema, UserUpdateSchema
 
@@ -21,10 +24,10 @@ user_router: APIRouter = APIRouter(tags=["user"])
 )
 @inject
 async def get_user_list(
-        user_service: UserService = Depends(Provide[Container.async_user_service])
-):
+        user_service: UserService = Depends(Provide[Container.user_service])
+) -> List[UserSimpleSchema]:
     """ 获取用户列表 """
-    users = await user_service.get_user_list()
+    users: List[SysUser] = user_service.get_user_list()
     return [UserSimpleSchema.from_orm(user) for user in users]
 
 
@@ -37,10 +40,10 @@ async def get_user_list(
 @inject
 async def get_user(
         user_id: str,
-        user_service: UserService = Depends(Provide[Container.async_user_service]),
-):
+        user_service: UserService = Depends(Provide[Container.user_service]),
+) -> UserSimpleSchema:
     """ 获取用户详情 """
-    user = await user_service.get_user(identity=user_id)
+    user: SysUser = user_service.get_user(identity=user_id)
     return UserSimpleSchema.from_orm(user)
 
 
@@ -52,10 +55,10 @@ async def get_user(
 @inject
 async def create_user(
         create_schema: UserCreationSchema,
-        user_service: UserService = Depends(Provide[Container.async_user_service])
+        user_service: UserService = Depends(Provide[Container.user_service])
 ):
     """ 创建新用户 """
-    await user_service.add_user(create_schema=create_schema)
+    user_service.add_user(create_schema=create_schema)
     return Response(status_code=status.HTTP_201_CREATED)
 
 
@@ -68,9 +71,22 @@ async def create_user(
 async def update_user(
         user_id: str,
         update_schema: UserUpdateSchema,
-        user_service: UserService = Depends(Provide[Container.async_user_service])
+        user_service: UserService = Depends(Provide[Container.user_service])
 ):
     """ 修改用户信息 """
-    user = await user_service.get_user(identity=user_id)
-    fresh_user = await user_service.update_user(model=user, update_schema=update_schema)
-    return fresh_user
+    user_service.update_user(identity=user_id, update_schema=update_schema)
+    return Response(status_code=status.HTTP_200_OK)
+
+
+@user_router.delete(
+    path="/{user_id}",
+    name="删除系统用户",
+    dependencies=[Depends(permission_required("sys:user:delete"))]
+)
+@inject
+async def delete_user(
+        user_id: str,
+        user_service: UserService = Depends(Provide[Container.user_service])
+):
+    user_service.delete_user(identity=user_id)
+    return Response(status_code=status.HTTP_200_OK)

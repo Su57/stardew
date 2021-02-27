@@ -2,8 +2,8 @@
 # @Author        : Yao YuHang
 # @CreatedTime   : 2021/2/25 14:49
 # @Description   :
+from typing import Optional
 from abc import ABC, abstractmethod
-from typing import Optional, NoReturn
 
 from stardew.core.web.schemas import BearerToken
 from stardew.core.web.schemas import CaptchaInfo
@@ -37,7 +37,7 @@ class LoginService(ABC):
             self,
             uid: str,
             code: str
-    ) -> NoReturn:
+    ) -> None:
         """
         校验验证码, 不存在或不一致时抛出错误
         :param uid: redis中的键名

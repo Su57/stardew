@@ -47,6 +47,7 @@ class Database:
 
     @contextmanager
     def session(self) -> Callable[..., ContextManager[Session]]:
+        """ sqlalchemy数据库会话上下文管理 """
         session: Session = self._session_factory()
         try:
             yield session
@@ -59,6 +60,7 @@ class Database:
 
     @asynccontextmanager
     async def async_session(self) -> Callable[..., AsyncContextManager[AsyncSession]]:
+        """ sqlalchemy异步数据库会话上下文管理 # TODO typing annotation """
         async_session: AsyncSession = self._async_session_factory()
         try:
             yield async_session

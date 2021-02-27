@@ -6,7 +6,7 @@ import smtplib
 from email.header import Header
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import NoReturn, Tuple, Union, List, Dict, Any, Optional
+from typing import Tuple, Union, List, Dict, Any, Optional
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
@@ -27,7 +27,7 @@ class EmailUtil:
         html_content: str,
         receivers: Union[Tuple, List],
         sender_alias: Optional[str] = None
-    ) -> NoReturn:
+    ) -> None:
         """
         发送邮件。邮件应当使用Jinja2模板进行渲染。
         :param sender_alias: 发送者昵称

@@ -2,8 +2,6 @@
 # @Author        : Yao YuHang
 # @CreatedTime   : 2021/1/29 10:33
 # @Description   :
-from typing import NoReturn
-
 from fastapi import FastAPI
 
 from stardew import api
@@ -20,7 +18,7 @@ def create_app() -> FastAPI:
     return app
 
 
-def register_router(app: FastAPI) -> NoReturn:
+def register_router(app: FastAPI) -> None:
     app.include_router(router=login_router)
     app.include_router(router=system_router)
 

@@ -7,8 +7,8 @@ from io import BytesIO
 from random import randint
 from datetime import datetime
 from datetime import timedelta
+from typing import Set, Optional
 from string import ascii_letters, digits
-from typing import Set, Optional, NoReturn
 
 from aioredis import Redis
 from fastapi import HTTPException, status
@@ -16,7 +16,7 @@ from captcha.image import ImageCaptcha, Image
 
 from stardew.settings import settings
 from stardew.models.system import SysUser
-from stardew.core.db.crud import CURDService
+from stardew.core.db.crud import CRUDService
 from stardew.common.constants import Constant
 from stardew.core.web.schemas import CaptchaInfo
 from stardew.schemas.system import UserSimpleSchema
@@ -30,11 +30,10 @@ class LoginServiceImpl(LoginService):
 
     def __init__(
         self,
-        curd: CURDService,
+        crud: CRUDService,
         redis: Redis
     ) -> None:
-        self.curd = curd
-        self.curd.set_model_class(SysUser)
+        self.crud = crud
         self.redis = redis
 
     async def login(
@@ -43,7 +42,7 @@ class LoginServiceImpl(LoginService):
         password: str
     ) -> BearerToken:
         """ 登录逻辑 """
-        query_set = self.curd.filter(where_clause={"email": email})
+        query_set = self.crud.filter(where_clause={"email": email})
         if len(query_set) == 0:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "用户不存在")
         user: SysUser = query_set[0]
@@ -95,10 +94,12 @@ class LoginServiceImpl(LoginService):
             self,
             uid: str,
             code: str
-    ) -> NoReturn:
-        """ 校验验证码, 不存在或不一致时抛出错误 """
-        redis_code = await self.redis.get(Constant.CAPTCHA_REDIS_KEY + uid, encoding=Constant.UTF8)
+    ) -> None:
+        """ 校验验证码, 不存在或不一致时抛出错误,否则删除该键 """
+        redis_key: str = Constant.CAPTCHA_REDIS_KEY + uid
+        redis_code = await self.redis.get(redis_key, encoding=Constant.UTF8)
         if redis_code is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="验证码已失效")
         if not redis_code.lower() == code.lower():
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="验证码错误")
+        await self.redis.delete(redis_key)

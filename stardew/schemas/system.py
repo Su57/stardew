@@ -34,8 +34,7 @@ class RoleSchema(RoleSimpleSchema):
 
 
 class UserValidationSchema(BaseValidationSchema):
-    username: str = Field(..., max_length=50, min_length=6, description="用户名")
-    nickname: Optional[str] = Field(None, max_length=50, min_length=6, description="昵称")
+    nickname: Optional[str] = Field(None, max_length=50, min_length=4, description="昵称")
     email: EmailStr = Field(..., description="用户邮箱")
     mobile: Optional[str] = Field("", description="用户手机号码")
     gender: Optional[GenderEnum] = Field(GenderEnum.unknown, description="性别 0:未知 1:男 2:女")
@@ -44,11 +43,13 @@ class UserValidationSchema(BaseValidationSchema):
 
 class UserCreationSchema(UserValidationSchema):
     """ 创建用户schema """
+    username: str = Field(..., max_length=50, min_length=4, description="用户名")
     password: str = Field(..., min_length=6, max_length=20, description="密码")
 
 
 class UserUpdateSchema(UserValidationSchema):
     """ 更新用户schema """
+    username: Optional[str] = Field(None, max_length=50, min_length=4, description="用户名")
     status: Optional[int] = Field(None, description="账号状态")
     remark: Optional[str] = Field(None, max_length=100, description="账号备注")
 

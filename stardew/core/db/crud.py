@@ -3,17 +3,14 @@
 # @CreatedTime   : 2021/2/1 14:39
 # @Description   : 数据库增删改查
 from abc import ABC, abstractmethod
-from typing import (
-    Any, Dict, Generic, List, Optional, Type, TypeVar,
-    Union, NoReturn, Callable, AsyncContextManager, ContextManager
-)
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union, Callable, AsyncContextManager, ContextManager
 
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.engine.result import Result
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio.session import AsyncSession
-from sqlalchemy.sql import select, insert, delete, update, Executable, text
+from sqlalchemy.sql import select, Select, insert, Insert, delete, Delete, update, Update, text
 
 from stardew.core.db.base import Base
 
@@ -22,15 +19,8 @@ CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
-class AbstractCURDService(ABC):
-
-    @abstractmethod
-    def set_model_class(self, model_class: Type[ModelType]) -> NoReturn:
-        """
-        设定查询的db Model
-        :param model_class: 数据库Model类
-        :return:
-        """
+class AbstractCRUDService(ABC):
+    __slots__ = ("Model", "session_factory")
 
     @abstractmethod
     def filter(self, *, where_clause: Dict) -> List[ModelType]:
@@ -58,16 +48,16 @@ class AbstractCURDService(ABC):
         """
 
     @abstractmethod
-    def update(self, *, model: ModelType, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> ModelType:
+    def update(self, *, identity: Any, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> None:
         """
-        更新条目
-        :param model: 待更新的对象实例
+        更新条目 # TODO 需要返回更新后的对象
+        :param identity: 待更新对象的id
         :param update_schema: 更新所需schema
         :return: 更新后的对象
         """
 
     @abstractmethod
-    def add(self, *, create_schema: CreateSchemaType) -> NoReturn:
+    def add(self, *, create_schema: CreateSchemaType) -> None:
         """
         创建对象
         :param create_schema: 创建对象所提供的数据(schema)
@@ -75,7 +65,7 @@ class AbstractCURDService(ABC):
         """
 
     @abstractmethod
-    def delete_by_id(self, *, identity: str) -> NoReturn:
+    def delete_by_id(self, *, identity: str) -> None:
         """
         通过id进行删除操作
         :param identity: 对象id
@@ -83,22 +73,17 @@ class AbstractCURDService(ABC):
         """
 
 
-class CURDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType], AbstractCURDService):
-    """ CURD逻辑(同步) """
-
-    __slots__ = ("Model", "session_factory")
+class CRUDService(AbstractCRUDService):
+    """ CRUD逻辑(同步) """
 
     def __init__(
             self,
             *,
-            session_factory: Callable[..., ContextManager[Session]],
-            model_class: Optional[Type[ModelType]] = None
+            model_class: Type[ModelType],
+            session_factory: Callable[..., ContextManager[Session]]
     ) -> None:
         self.Model = model_class
         self.session_factory = session_factory
-
-    def set_model_class(self, model_class: Type[ModelType]) -> NoReturn:
-        self.Model = model_class
 
     def filter(self, *, where_clause: Dict) -> List[ModelType]:
         with self.session_factory() as session:
@@ -117,99 +102,80 @@ class CURDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType], Abstra
         with self.session_factory() as session:
             return session.query(self.Model).offset(offset).limit(page_size).all()
 
-    def add(self, *, create_schema: CreateSchemaType) -> NoReturn:
+    def add(self, *, create_schema: CreateSchemaType) -> None:
         with self.session_factory() as session:
             input_data = jsonable_encoder(create_schema)
             user = self.Model(**input_data)
             session.add(user)
             session.commit()
 
-    def update(self, *, model: ModelType, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> ModelType:
+    def update(self, *, identity, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> None:
         with self.session_factory() as session:
-            original_data = jsonable_encoder(model)
-            if isinstance(update_schema, dict):
-                update_data = update_schema
-            else:
-                update_data = update_schema.dict(exclude_unset=True)
-            for field in original_data:
-                if field in update_data:
-                    setattr(model, field, update_data[field])
-            session.add(model)
+            update_data: Dict = update_schema if isinstance(update_schema, dict) else update_schema.dict(
+                exclude_unset=True)
+            stmt: Update = update(self.Model).where(self.Model.id == identity).values(**update_data)
+            session.execute(stmt)
             session.commit()
-            session.refresh(model)
-            return model
 
-    def delete_by_id(self, *, identity: str) -> NoReturn:
-
+    def delete_by_id(self, *, identity: str) -> None:
         with self.session_factory() as session:
             obj = session.query(self.Model).get(identify=identity)
             session.delete(obj)
             session.commit()
 
 
-class AsyncCURDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType], AbstractCURDService):
-    """ CURD逻辑(异步) 未测试 """
-
-    __slots__ = ("Model", "session_factory")
+class AsyncCRUDService(AbstractCRUDService):
+    """ CRUD逻辑(异步) """
 
     def __init__(
             self,
             *,
-            session_factory: Callable[..., AsyncContextManager[AsyncSession]],
-            model_class: Optional[Type[ModelType]] = None
+            model_class: Type[ModelType],
+            session_factory: Callable[..., AsyncContextManager[AsyncSession]]
     ) -> None:
         self.Model = model_class
         self.session_factory = session_factory
 
-    def set_model_class(self, model_class: Type[ModelType]) -> NoReturn:
-        self.Model = model_class
-
     async def get_by_id(self, *, identify: Any) -> Optional[ModelType]:
         async with self.session_factory() as session:
-            stmt: Executable = select(self.Model).where(self.Model.id == identify)
-            return await session.scalar(stmt)
+            return await session.get(entity=self.Model, ident=identify)
 
     async def filter(self, *, where_clause: Dict) -> List[ModelType]:
-        """
-        自定义过滤条件
-        :param where_clause: 过滤条件
-        :return: 符合条件的对象列表
-        """
         async with self.session_factory() as session:
-            clauses: List = []
+            clauses_stmt: List = []
             for k, v in where_clause.items():
-                clauses.append(f"{k} = '{v}'")
-            where_stmt: str = " AND ".join(clauses)
-            stmt: Executable = select(self.Model).where(text(where_stmt))
+                clauses_stmt.append(f"{k} = '{v}'")
+            where_stmt: str = " AND ".join(clauses_stmt)
+            stmt: Select = select(self.Model).where(text(where_stmt))
             result: Result = session.execute(stmt)
             return [x[0] for x in result.fetchall()]
 
     async def get_multi(self, *, page_no: int = 0, page_size: int = 100) -> List[ModelType]:
         async with self.session_factory() as session:
             offset: int = page_no * page_size
-            stmt: Executable = select(self.Model).offset(offset).limit(page_size)
+            stmt: Select = select(self.Model).offset(offset).limit(page_size)
             result: Result = await session.execute(stmt)
             # ORM模式下的select，其返回结果与Core模式不同
             # 具体信息，参考 https://docs.sqlalchemy.org/en/14/tutorial/data.html#selecting-orm-entities-and-columns
             return [x[0] for x in result.fetchall()]
 
-    async def update(self, *, model: ModelType, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> ModelType:
+    async def update(self, *, identity: Any, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> None:
         async with self.session_factory() as session:
-            update_data = update_schema if isinstance(update_schema, dict) else update_schema.dict(exclude_unset=True)
-            stmt: Executable = update(model).where(self.Model.id == model.id).values(**update_data)
-            await session.execute(stmt)
-            await session.refresh(model)
-            return model
-
-    async def add(self, *, create_schema: CreateSchemaType) -> NoReturn:
-        async with self.session_factory() as session:
-            obj_in_data = jsonable_encoder(create_schema)
-            stmt: Executable = insert(self.Model).values(**obj_in_data)
+            update_data: Dict = update_schema if isinstance(update_schema, dict) else update_schema.dict(
+                exclude_unset=True)
+            stmt: Update = update(self.Model).where(self.Model.id == identity).values(**update_data)
             await session.execute(stmt)
             await session.commit()
 
-    async def delete_by_id(self, *, identity: Any) -> NoReturn:
+    async def add(self, *, create_schema: CreateSchemaType) -> None:
         async with self.session_factory() as session:
-            stmt: Executable = delete(self.Model).where(self.Model.id == identity)
+            obj_in_data = jsonable_encoder(create_schema)
+            stmt: Insert = insert(self.Model).values(**obj_in_data)
+            await session.execute(stmt)
+            await session.commit()
+
+    async def delete_by_id(self, *, identity: Any) -> None:
+        async with self.session_factory() as session:
+            stmt: Delete = delete(self.Model).where(self.Model.id == identity)
             await session.execute(stmt)
             await session.commit()
