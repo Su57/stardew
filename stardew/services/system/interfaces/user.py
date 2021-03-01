@@ -10,6 +10,7 @@ from stardew.schemas.system import UserCreationSchema, UserUpdateSchema
 
 
 class UserService(ABC):
+    """ 用户相关业务逻辑 """
 
     # TODO 这里的类型注解需要重新考虑，既要支持同步又要支持异步。。。
 

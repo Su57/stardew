@@ -2,7 +2,7 @@
 # @Author        : Yao YuHang
 # @CreatedTime   : 2021/2/9 21:53
 # @Description   :
-from typing import Union, List, Set, Dict, Optional, Callable
+from typing import Union, List, Set, Dict, Optional, Callable, Coroutine
 
 import orjson
 from jose import jwt
@@ -39,7 +39,7 @@ async def login_required(
             detail="请先登录",
         )
     try:
-        payload = jwt.decode(
+        payload: Dict = jwt.decode(
             token=authorization_credentials.credentials,
             key=settings.SECRET_KEY,
             algorithms=ALGORITHMS.HS256
@@ -69,7 +69,7 @@ async def login_required(
     return login_user
 
 
-def role_required(key: Union[str, List[str]]) -> Callable:
+def role_required(key: Union[str, List[str]]) -> Callable[[LoginUser], Coroutine[None, None, LoginUser]]:
     """
     角色校验。若当前登录者的角色(roles)属性中包含所需角色则视为通过校验。
     Example:
@@ -98,7 +98,7 @@ def role_required(key: Union[str, List[str]]) -> Callable:
     return wrapper
 
 
-def permission_required(key: str) -> Callable:
+def permission_required(key: str) -> Callable[[LoginUser], Coroutine[None, None, LoginUser]]:
     """
     权限校验。若当前登录者的权限(perms)属性中包含所需角色则视为通过校验。
     Example:

@@ -12,7 +12,6 @@ from stardew.schemas.system import UserCreationSchema, UserUpdateSchema
 
 
 class UserServiceImpl(UserService):
-    """ 用户相关业务逻辑 """
 
     def __init__(self, crud: CRUDService):
         self.crud = crud

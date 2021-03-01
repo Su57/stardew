@@ -119,14 +119,13 @@ class CRUDService(AbstractCRUDService):
 
     def delete_by_id(self, *, identity: str) -> None:
         with self.session_factory() as session:
-            obj = session.query(self.Model).get(identify=identity)
+            obj = session.query(self.Model).get(ident=identity)
             session.delete(obj)
             session.commit()
 
 
 class AsyncCRUDService(AbstractCRUDService):
     """ CRUD逻辑(异步) """
-
     def __init__(
             self,
             *,

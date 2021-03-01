@@ -2,7 +2,7 @@
 # @Author        : Yao YuHang
 # @CreatedTime   : 2021/2/8 12:38
 # @Description   : 系统用户管理
-from typing import List
+from typing import List, Optional
 
 from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends, Response, status
@@ -24,10 +24,12 @@ user_router: APIRouter = APIRouter(tags=["user"])
 )
 @inject
 async def get_user_list(
+        page_no: Optional[int] = 0,
+        page_size: Optional[int] = 10,
         user_service: UserService = Depends(Provide[Container.user_service])
 ) -> List[UserSimpleSchema]:
     """ 获取用户列表 """
-    users: List[SysUser] = user_service.get_user_list()
+    users: List[SysUser] = user_service.get_user_list(page_no=page_no, page_size=page_size)
     return [UserSimpleSchema.from_orm(user) for user in users]
 
 
@@ -88,5 +90,6 @@ async def delete_user(
         user_id: str,
         user_service: UserService = Depends(Provide[Container.user_service])
 ):
+    """ 删除系统用户 """
     user_service.delete_user(identity=user_id)
     return Response(status_code=status.HTTP_200_OK)
