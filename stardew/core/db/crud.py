@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.engine.result import Result
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio.session import AsyncSession
-from sqlalchemy.sql import select, Select, insert, Insert, delete, Delete, update, Update, text
+from sqlalchemy.sql import select, Select, insert, Insert, delete, Delete, update, Update, text, Executable
 
 from stardew.core.db.base import Base
 
@@ -48,10 +48,10 @@ class AbstractCRUDService(ABC):
         """
 
     @abstractmethod
-    def update(self, *, identity: Any, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> None:
+    def update(self, *, model: ModelType, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> ModelType:
         """
-        更新条目 # TODO 需要返回更新后的对象
-        :param identity: 待更新对象的id
+        更新条目
+        :param model: 需要跟新的对象
         :param update_schema: 更新所需schema
         :return: 更新后的对象
         """
@@ -93,29 +93,41 @@ class CRUDService(AbstractCRUDService):
             stmt: str = " AND ".join(clauses)
             return session.query(self.Model).filter(text(stmt)).all()
 
-    def get_by_id(self, *, identify: Any) -> Optional[ModelType]:
+    def get_by_id(self, *, identity: Any) -> Optional[ModelType]:
         with self.session_factory() as session:
-            return session.query(self.Model).filter(self.Model.id == identify).first()
+            return session.query(self.Model).filter(self.Model.id == identity).first()
 
     def get_multi(self, *, page_no: int = 0, page_size: int = 100) -> List[ModelType]:
         offset: int = page_no * page_size
         with self.session_factory() as session:
             return session.query(self.Model).offset(offset).limit(page_size).all()
 
-    def add(self, *, create_schema: CreateSchemaType) -> None:
+    def add(self, *, create_schema: Union[CreateSchemaType, Dict[str, Any]]) -> None:
         with self.session_factory() as session:
-            input_data = jsonable_encoder(create_schema)
-            user = self.Model(**input_data)
-            session.add(user)
+            if isinstance(create_schema, dict):
+                input_data = create_schema
+            else:
+                input_data = create_schema.dict(exclude_unset=True)
+            model = self.Model(**input_data)
+            session.add(model)
             session.commit()
 
-    def update(self, *, identity, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> None:
+    def update(self, *, model: ModelType, update_schema: Union[UpdateSchemaType, Dict[str, Any]]) -> ModelType:
         with self.session_factory() as session:
-            update_data: Dict = update_schema if isinstance(update_schema, dict) else update_schema.dict(
-                exclude_unset=True)
-            stmt: Update = update(self.Model).where(self.Model.id == identity).values(**update_data)
-            session.execute(stmt)
+            original_data = jsonable_encoder(model)
+            if isinstance(update_schema, dict):
+                update_data = update_schema
+            else:
+                update_data = update_schema.dict(exclude_unset=True)
+
+            for field in original_data:
+                if field in update_data:
+                    setattr(model, field, update_data[field])
+            # stmt: Update = update(self.Model).where(self.Model.id == identity).values(**update_data)
+            session.add(model)
             session.commit()
+            session.refresh(model)
+            return model
 
     def delete_by_id(self, *, identity: str) -> None:
         with self.session_factory() as session:
@@ -126,6 +138,7 @@ class CRUDService(AbstractCRUDService):
 
 class AsyncCRUDService(AbstractCRUDService):
     """ CRUD逻辑(异步) """
+
     def __init__(
             self,
             *,

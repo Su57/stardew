@@ -4,13 +4,16 @@
 # @Description   :
 from dependency_injector import containers, providers
 
+from stardew.repository.system import UserRepository, RoleRepository
 from stardew.settings import settings
 from stardew.core.db.base import Database
-from stardew.models.system import SysUser
 from stardew.core.redis import init_redis_pool
 from stardew.services.common.impl import LoginServiceImpl
+from stardew.models.system import SysUser, SysRole, SysMenu
 from stardew.core.db.crud import CRUDService, AsyncCRUDService
-from stardew.services.system.impl import UserServiceImpl, AsyncUserServiceImpl
+from stardew.services.system.impl import (
+    UserServiceImpl, RoleServiceImpl, MenuServiceImpl
+)
 
 
 class IocContainer(containers.DeclarativeContainer):
@@ -39,21 +42,31 @@ class IocContainer(containers.DeclarativeContainer):
         redis=redis_pool
     )
 
+    user_repository = providers.Factory(
+        UserRepository,
+        session_factory=db.provided.session,
+    )
+
+    role_repository = providers.Factory(
+        RoleRepository,
+        session_factory=db.provided.session,
+    )
+
     user_service = providers.Factory(
         UserServiceImpl,
+        repository=user_repository
+    )
+
+    role_service = providers.Factory(
+        RoleServiceImpl,
+        repository=role_repository
+    )
+
+    menu_service = providers.Factory(
+        MenuServiceImpl,
         crud=providers.Factory(
             CRUDService,
-            model_class=SysUser,
+            model_class=SysMenu,
             session_factory=db.provided.session
-        ),
+        )
     )
-
-    async_user_service = providers.Factory(
-        AsyncUserServiceImpl,
-        crud=providers.Factory(
-            AsyncCRUDService,
-            model_class=SysUser,
-            session_factory=db.provided.async_session
-        ),
-    )
-

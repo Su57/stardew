@@ -3,18 +3,22 @@
 # @CreatedTime   : 2021/2/1 11:55
 # @Description   :
 from contextlib import contextmanager, asynccontextmanager
-from typing import Callable, ContextManager, AsyncContextManager
+from typing import Callable, ContextManager, AsyncContextManager, Any
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import scoped_session, Session
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import as_declarative
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncEngine, create_async_engine
 
 from stardew.common.utils import logger
 
-Base = declarative_base()
+
+@as_declarative()
+class Base:
+    """ 所有的orm模型都需要一个id作为主键 """
+    id: Any
 
 
 class Database:

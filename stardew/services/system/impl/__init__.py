@@ -3,9 +3,13 @@
 # @CreatedTime   : 2021/2/26 12:58
 # @Description   :
 
-from .user import UserServiceImpl, AsyncUserServiceImpl
+from .user import UserServiceImpl
+from .role import RoleServiceImpl
+from .menu import MenuServiceImpl
 
 __all__ = {
     "UserServiceImpl",
-    "AsyncUserServiceImpl"
+    # "AsyncUserServiceImpl",
+    "RoleServiceImpl",
+    "MenuServiceImpl"
 }

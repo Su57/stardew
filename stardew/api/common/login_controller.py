@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from dependency_injector.wiring import inject, Provide
 
 from stardew.schemas.common import LoginSchema
-from stardew.services.common.interfaces import LoginService
+from stardew.services.common import LoginService
 from stardew.core.container import IocContainer as Container
 from stardew.core.web.schemas import BearerToken, CaptchaInfo
 
@@ -35,3 +35,4 @@ async def login(
     # 执行登录，获取令牌
     token = await login_service.login(email=body.email, password=body.password)
     return token
+

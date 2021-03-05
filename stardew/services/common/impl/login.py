@@ -20,8 +20,8 @@ from stardew.core.db.crud import CRUDService
 from stardew.common.constants import Constant
 from stardew.core.web.schemas import CaptchaInfo
 from stardew.schemas.system import UserSimpleSchema
+from stardew.services.common.login import LoginService
 from stardew.common.utils import StringUtil, SecurityUtil
-from stardew.services.common.interfaces import LoginService
 from stardew.core.web.schemas import BearerToken, LoginUser
 
 
@@ -29,17 +29,17 @@ class LoginServiceImpl(LoginService):
     """ AdminService具体实现 """
 
     def __init__(
-        self,
-        crud: CRUDService,
-        redis: Redis
+            self,
+            crud: CRUDService,
+            redis: Redis
     ) -> None:
         self.crud = crud
         self.redis = redis
 
     async def login(
-        self,
-        email: str,
-        password: str
+            self,
+            email: str,
+            password: str
     ) -> BearerToken:
         """ 登录逻辑 """
         query_set = self.crud.filter(where_clause={"email": email})

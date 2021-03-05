@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author        : Yao YuHang
-# @CreatedTime   : 2021/2/25 18:33
+# @CreatedTime   : 2021/3/2 11:30
 # @Description   :
-from .login import LoginService
+from stardew.services.common.login import LoginService
 
 __all__ = {
     "LoginService",

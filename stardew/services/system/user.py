@@ -2,11 +2,11 @@
 # @Author        : Yao YuHang
 # @CreatedTime   : 2021/2/26 12:52
 # @Description   :
+from typing import List, Optional, Union, Any, Dict
 from abc import ABC, abstractmethod
-from typing import List, Optional, Any
 
-from stardew.models.system import SysUser
-from stardew.schemas.system import UserCreationSchema, UserUpdateSchema
+from stardew.models.system import SysUser, SysRole
+from stardew.schemas.system import UserCreateSchema, UserUpdateSchema
 
 
 class UserService(ABC):
@@ -26,31 +26,39 @@ class UserService(ABC):
         :param page_size: 每页数量
         :return: 分页数据
         """
+        pass
 
     @abstractmethod
     def get_user(self, identity: str) -> SysUser:
         """
-        根据id获取用户
+        根据id获取用户。查询结果为None时抛出HttpException
         :param identity: 用户id
         :return:
         """
+        pass
 
     @abstractmethod
-    def add_user(self, create_schema: UserCreationSchema) -> None:
+    def add_user(self, create_schema: Union[UserCreateSchema, Dict[str, Any]]) -> None:
         """
         新增用户
         :param create_schema: 新增时的数据
         :return:
         """
+        pass
 
     @abstractmethod
-    def update_user(self, identity: Any, update_schema: UserUpdateSchema) -> None:
+    def update_user(
+            self,
+            identity: str,
+            update_schema: Union[UserUpdateSchema, Dict[str, Any]],
+    ) -> SysUser:
         """
         更新用户
         :param identity: 待更新对象的id
         :param update_schema:  更新的数据
-        :return:
+        :return: 更新后的对象
         """
+        pass
 
     @abstractmethod
     def delete_user(self, identity: str) -> None:
@@ -59,3 +67,4 @@ class UserService(ABC):
         :param identity: 用户id
         :return:
         """
+        pass
